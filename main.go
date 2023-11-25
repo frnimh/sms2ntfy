@@ -27,6 +27,7 @@ type Output struct {
 	Title    string   `json:"title"`
 	Actions  []Action `json:"actions"`
 	Priority int      `json:"priority"`
+	Tags     []string `json:"tags"`
 }
 
 func convertInputToOutput(input Input, topic string, priority int) Output {
@@ -39,9 +40,10 @@ func convertInputToOutput(input Input, topic string, priority int) Output {
 	return Output{
 		Topic:    topic,
 		Message:  input.Body,
-		Title:    "From: " + input.From,
+		Title:    input.From,
 		Actions:  []Action{callAction},
 		Priority: priority,
+		Tags:     []string{"envelope_with_arrow"},
 	}
 }
 
