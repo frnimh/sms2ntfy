@@ -1,0 +1,33 @@
+version: '3'
+
+services:
+  ntfy:
+    image: binwiederhier/ntfy:v2.7.0
+    restart: unless-stopped
+    user: 1000:1000
+    command: 
+      - serve
+    environment:
+      TZ: UTC
+    ports:
+      - 80:80
+    networks:
+      - ntfy
+
+  sms2ntfy:
+    image: frnimh/sms2ntfy:latest
+    restart: unless-stopped
+    environment:
+      NTFY_TOPIC: "messages"
+      NTFY_PRIORITY: "3"
+      NTFY_URL: "http://ntfy:80/"
+    ports:
+      - 8080:8080
+    networks:
+      - ntfy
+
+networks:
+  ntfy:
+    name: ntfy
+
+
