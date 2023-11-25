@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
+	"strconv"
 )
 
 type Input struct {
@@ -20,13 +22,13 @@ type Output struct {
 	Priority int    `json:"priority"`
 }
 
-func convertInputToOutput(input Input) Output {
+func convertInputToOutput(input Input, topic string, priority int) Output {
 	return Output{
-		Topic:    "Messages",
+		Topic:    topic,
 		Message:  input.Body,
 		Title:    "From: " + input.From,
 		Call:     input.From,
-		Priority: 1,
+		Priority: priority,
 	}
 }
 
@@ -45,8 +47,20 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Get topic and priority from environment variables
+	topic := os.Getenv("NTFY_TOPIC")
+	if topic == "" {
+		topic = "Messages" // Default value if not provided in environment variables
+	}
+
+	priorityStr := os.Getenv("NTFY_PRIORITY")
+	priority, err := strconv.Atoi(priorityStr)
+	if err != nil {
+		priority = 1 // Default value if not provided or invalid
+	}
+
 	// Convert input to output
-	output := convertInputToOutput(input)
+	output := convertInputToOutput(input, topic, priority)
 
 	// Print output to terminal as formatted JSON
 	outputJSON, err := json.MarshalIndent(output, "", "    ")
