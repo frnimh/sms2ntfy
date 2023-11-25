@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -14,22 +15,53 @@ type Input struct {
 	Timestamp int64  `json:"timestamp"`
 }
 
+type Action struct {
+	Action string `json:"action"`
+	Label  string `json:"label"`
+	URL    string `json:"url"`
+}
+
 type Output struct {
-	Topic    string `json:"topic"`
-	Message  string `json:"message"`
-	Title    string `json:"title"`
-	Call     string `json:"call"`
-	Priority int    `json:"priority"`
+	Topic    string   `json:"topic"`
+	Message  string   `json:"message"`
+	Title    string   `json:"title"`
+	Actions  []Action `json:"actions"`
+	Priority int      `json:"priority"`
 }
 
 func convertInputToOutput(input Input, topic string, priority int) Output {
+	callAction := Action{
+		Action: "view",
+		Label:  "Call",
+		URL:    "tel://" + input.From,
+	}
+
 	return Output{
 		Topic:    topic,
 		Message:  input.Body,
 		Title:    "From: " + input.From,
-		Call:     input.From,
+		Actions:  []Action{callAction},
 		Priority: priority,
 	}
+}
+
+func sendOutputToWebhook(output Output, webhookURL string) error {
+	outputJSON, err := json.Marshal(output)
+	if err != nil {
+		return err
+	}
+
+	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(outputJSON))
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("Webhook returned non-OK status: %d", resp.StatusCode)
+	}
+
+	return nil
 }
 
 func webhookHandler(w http.ResponseWriter, r *http.Request) {
@@ -69,6 +101,17 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Printf("Received Input:\n%+v\n\nConverted Output:\n%s\n", input, outputJSON)
+
+	// Send output to another webhook if the URL is provided
+	webhookURL := os.Getenv("NTFY_URL")
+	if webhookURL != "" {
+		err := sendOutputToWebhook(output, webhookURL)
+		if err != nil {
+			fmt.Printf("Error sending output to webhook: %v\n", err)
+		} else {
+			fmt.Printf("Output sent to webhook successfully\n")
+		}
+	}
 
 	// You can do further processing with the output here
 
