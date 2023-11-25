@@ -96,22 +96,20 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 	// Convert input to output
 	output := convertInputToOutput(input, topic, priority)
 
-	// Print output to terminal as formatted JSON
-	outputJSON, err := json.MarshalIndent(output, "", "    ")
-	if err != nil {
-		http.Error(w, "Failed to marshal output to JSON", http.StatusInternalServerError)
-		return
-	}
-	fmt.Printf("Received Input:\n%+v\n\nConverted Output:\n%s\n", input, outputJSON)
+	// Log the receipt of a POST request
+	fmt.Println("Received POST request")
 
 	// Send output to another webhook if the URL is provided
 	webhookURL := os.Getenv("NTFY_URL")
 	if webhookURL != "" {
+		// Log the attempt to send output to the webhook
+		fmt.Println("Sending output to webhook...")
+
 		err := sendOutputToWebhook(output, webhookURL)
 		if err != nil {
 			fmt.Printf("Error sending output to webhook: %v\n", err)
 		} else {
-			fmt.Printf("Output sent to webhook successfully\n")
+			fmt.Println("Output sent to webhook successfully")
 		}
 	}
 
