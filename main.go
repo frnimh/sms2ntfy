@@ -39,6 +39,12 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Validate required fields
+	if input.Body == "" || input.From == "" || input.Timestamp == 0 {
+		http.Error(w, "Missing required fields in input JSON", http.StatusBadRequest)
+		return
+	}
+
 	// Convert input to output
 	output := convertInputToOutput(input)
 
