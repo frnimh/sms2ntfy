@@ -47,13 +47,25 @@ func convertInputToOutput(input Input, topic string, priority int) Output {
 	}
 }
 
-func sendOutputToWebhook(output Output, webhookURL string) error {
+func sendOutputToWebhook(output Output, webhookURL, authToken string) error {
 	outputJSON, err := json.Marshal(output)
 	if err != nil {
 		return err
 	}
 
-	resp, err := http.Post(webhookURL, "application/json", bytes.NewBuffer(outputJSON))
+	req, err := http.NewRequest("POST", webhookURL, bytes.NewBuffer(outputJSON))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+
+	// Add Authorization header if NTFY_TOKEN is set
+	if authToken != "" {
+		req.Header.Set("Authorization", authToken)
+	}
+
+	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return err
 	}
@@ -105,7 +117,10 @@ func webhookHandler(w http.ResponseWriter, r *http.Request) {
 		// Log the attempt to send output to the webhook
 		fmt.Println("Sending output to webhook...")
 
-		err := sendOutputToWebhook(output, webhookURL)
+		// Get NTFY_TOKEN from environment variables
+		authToken := os.Getenv("NTFY_TOKEN")
+
+		err := sendOutputToWebhook(output, webhookURL, authToken)
 		if err != nil {
 			fmt.Printf("Error sending output to webhook: %v\n", err)
 		} else {
